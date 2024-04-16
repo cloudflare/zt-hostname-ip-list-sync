@@ -53,14 +53,14 @@ export default {
 			// Wrap each destination IP in an object in order to construct the payload for the createZeroTrustList request
 			const newIPListItems = destinationIPList.map((item) => {
 				const val = {
-					value: item.ip,
+					value: item,
 				};
 				return val;
 			});
 
 			const data = {
 				name: `FQDN: ${domain}`,
-				description: `Destination IP for ${domain}`,
+				description: `Destination IPs for ${domain}`,
 				items: newIPListItems,
 				type: 'IP',
 			};
