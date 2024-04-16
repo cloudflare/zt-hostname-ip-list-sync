@@ -28,16 +28,16 @@ export default {
 		const CF_API_TOKEN = env.CF_API_TOKEN;
 		if (!CF_API_TOKEN) throw new Error('CF_API_TOKEN is required');
 
-		const gatewayLists = await listGatewayLists(env);
+		const zeroTrustLists = await listZeroTrustLists(env, API_BASE_URL);
 
 		// For now lets filter by name
-		const filteredLists = gatewayLists.filter((item) => item.description == LIST_TAG);
+		const filteredLists = zeroTrustLists.filter((item) => item.description == LIST_TAG);
 		const listID = filteredLists[0].id;
 		if (!listID) {
 			throw new Error('Could not find ID for list with "RESOLVER_HOSTS" attribute');
 		}
 
-		const domainListItems = await getGatewayListItems(env);
+		const domainListItems = await getZeroTrustListItems(env, API_BASE_URL, listID);
 
 		const domains = domainListItems.map((item) => item.value);
 		let wasSuccessful = true;
@@ -50,13 +50,14 @@ export default {
 				throw new Error(`No destination IPs found for ${domain}`);
 			}
 
-			// Wrap each destination IP in an object in order to construct the payload for the createGatewayList request
+			// Wrap each destination IP in an object in order to construct the payload for the createZeroTrustList request
 			const newIPListItems = destinationIPList.map((item) => {
 				const val = {
 					value: item.ip,
 				};
 				return val;
 			});
+
 			const data = {
 				name: `FQDN: ${domain}`,
 				description: `Destination IP for ${domain}`,
@@ -64,28 +65,28 @@ export default {
 				type: 'IP',
 			};
 			console.log('Data:', data);
-			await createGatewayList(env, data);
+			await createZeroTrustList(env, API_BASE_URL, data);
 		}
 		// console.log(`trigger fired at ${event.cron}: ${wasSuccessful}`);
 		return new Response('Success');
 	},
 };
 
-async function listGatewayLists(env) {
+async function listZeroTrustLists(env, baseUrl) {
 	// Fetch the list of ZT Lists
-	const listGWListsReq = new Request(`${env.API_BASE_URL}/gateway/lists`, {
+	const listZTListsReq = new Request(`${baseUrl}/gateway/lists`, {
 		method: 'GET',
 		headers: {
 			accept: 'application/json',
 			authorization: `Bearer ${env.CF_API_TOKEN}`,
 		},
 	});
-	const ztListResp = await fetch(listGWListsReq);
-	if (!ztListResp.ok) throw new Error('Failed to fetch');
+	const listZTListsResp = await fetch(listZTListsReq);
+	if (!listZTListsResp.ok) throw new Error('Failed to fetch');
 
-	const ztListRespJson = await ztListResp.json();
-	console.log('ListRespJson:', ztListRespJson);
-	const results = ztListRespJson?.result;
+	const listZTListsRespJson = await listZTListsResp.json();
+	console.log('ListRespJson:', listZTListsRespJson);
+	const results = listZTListsRespJson?.result;
 
 	if (!results || results.length == 0) {
 		throw new Error('Could not find any Gateway Lists. Exiting...');
@@ -94,20 +95,20 @@ async function listGatewayLists(env) {
 	return results;
 }
 
-async function getGatewayListItems(env) {
+async function getZeroTrustListItems(env, baseUrl, id) {
 	// Fetch all of the items within the "RESOLVER_HOSTS" tagged list
-	const getDomainItemsReq = new Request(`${env.API_BASE_URL}/gateway/lists/${listID}/items`, {
+	const getZTListItemsReq = new Request(`${baseUrl}/gateway/lists/${id}/items`, {
 		method: 'GET',
 		headers: {
 			accept: 'application/json',
 			authorization: `Bearer ${env.CF_API_TOKEN}`,
 		},
 	});
-	const domainListItemsResp = await fetch(getDomainItemsReq);
-	if (!domainListItemsResp.ok) throw new Error('Failed to fetch');
+	const getZTListItemsResp = await fetch(getZTListItemsReq);
+	if (!getZTListItemsResp.ok) throw new Error('Failed to fetch');
 
-	const domainListItemsRespJson = await domainListItemsResp.json();
-	const results = domainListItemsRespJson?.result;
+	const getZTListItemsRespJson = await getZTListItemsResp.json();
+	const results = getZTListItemsRespJson?.result;
 	console.log('Domain Lists:', results);
 
 	if (!results || results.length == 0) {
@@ -146,8 +147,8 @@ async function getDestinationIPs(domain, dohId) {
 	return results;
 }
 
-async function createGatewayList(env, data) {
-	const createNewListReq = new Request(`${env.API_BASE_URL}/gateway/lists`, {
+async function createZeroTrustList(env, baseUrl, data) {
+	const createZTListReq = new Request(`${baseUrl}/gateway/lists`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -156,10 +157,10 @@ async function createGatewayList(env, data) {
 		},
 		body: JSON.stringify(data),
 	});
-	const createNewListResp = await fetch(createNewListReq);
-	if (!createNewListResp.ok) throw new Error('Failed to create new list');
+	const createZTListResp = await fetch(createZTListReq);
+	if (!createZTListResp.ok) throw new Error('Failed to create new list');
 
-	const createNewListRespJson = await createNewListResp.json();
-	if (!createNewListRespJson.success) throw new Error('Failed to create new list');
-	console.log('newListRespJson:', createNewListRespJson);
+	const createZTListRespJson = await createZTListResp.json();
+	if (!createZTListRespJson.success) throw new Error('Failed to create new list');
+	console.log('newListRespJson:', createZTListRespJson);
 }
