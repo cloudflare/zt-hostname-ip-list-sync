@@ -1,0 +1,3 @@
+CF_ACCOUNT_TAG="You Cloudflare Account ID. See https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/"
+CF_TOKEN="API token for Terraform (scoped to Zero Trust Edit, Worker Edit)"
+WORKER_ZEROTRUST_LISTS_TOKEN="API token for Worker (scoped to Zero Trust List Edit)"
