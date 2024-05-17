@@ -1,30 +1,8 @@
-/**
- * Welcome to Cloudflare Workers!
- *
- * This is a template for a Scheduled Worker: a Worker that can run on a
- * configurable interval:
- * https://developers.cloudflare.com/workers/platform/triggers/cron-triggers/
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
 export default {
 	async fetch(event, env, ctx) {
-		console.log('cron processed');
-		return new Response('Hello world!');
+		return new Response('Not Implemented', { "status" : 501 });
 	},
-	// The scheduled handler is invoked at the interval set in our wrangler.toml's
-	// [[triggers]] configuration.
 	async scheduled(event, env, ctx) {
-		// A Cron Trigger can make requests to other endpoints on the Internet,
-		// publish to a Queue, query a D1 Database, and much more.
-		//
-		// Verify that env variables are present
-
 		const ACCOUNT_TAG = env.ZT_ACCOUNT_TAG;
 		if (!ACCOUNT_TAG) throw new Error('ZT_ACCOUNT_TAG is required');
 		const API_BASE_URL = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_TAG}`;
