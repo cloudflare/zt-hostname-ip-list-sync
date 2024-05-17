@@ -110,3 +110,7 @@ Yes. You can rename the title and description of this list. The Worker selects t
 ## Can I modify an automatically generated hostname list?
 
 The only property you may modify is the title. The script selects the hostname list based on the description which must not be modified. Manual IP changes will be overwritten on the next cron invocation.
+
+## Monitoring
+
+You can monitor cron invocations and tail logs using the [Workers dashboard](https://developers.cloudflare.com/workers/configuration/cron-triggers/#view-past-events).
