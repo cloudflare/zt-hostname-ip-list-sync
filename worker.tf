@@ -1,19 +1,11 @@
-variable "CRON_SCHEDULE" {
-  type    = string
-  default = "* * * * *"
-}
-
-variable "WORKER_ZEROTRUST_LISTS_TOKEN" {
-  type    = string
-  sensitive = true
-}
-
 resource "cloudflare_worker_cron_trigger" "hostname-list-sync" {
   account_id  = var.CF_ACCOUNT_TAG
   script_name = cloudflare_worker_script.hostname-list-sync.name
   schedules = [
     var.CRON_SCHEDULE
   ]
+
+  depends_on = [cloudflare_worker_script.hostname-list-sync]
 }
 
 resource "cloudflare_worker_script" "hostname-list-sync" {
@@ -40,8 +32,7 @@ resource "cloudflare_worker_script" "hostname-list-sync" {
     text = var.WORKER_ZEROTRUST_LISTS_TOKEN
   }
 
-  module = true
-
-  content = file("src/script.js")
-
+  module     = true
+  content    = file("${path.root}/src/index.js")
+  depends_on = [cloudflare_teams_list.hostnames, cloudflare_teams_location.doh]
 }
