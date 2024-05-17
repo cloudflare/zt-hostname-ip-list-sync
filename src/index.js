@@ -40,6 +40,8 @@ export default {
 
 		const domainListItems = await getZeroTrustListItems(env, API_BASE_URL, LIST_ID);
 
+		const allZTLists = await listZeroTrustLists(env, API_BASE_URL);
+
 		const domains = domainListItems.map((item) => item.value);
 		let wasSuccessful = true;
 
@@ -67,22 +69,45 @@ export default {
 				type: 'IP',
 			};
 			console.log('Data:', data);
-			let createResp = await createZeroTrustList(env, API_BASE_URL, data);
 
-			// Delete and Recreate the list if one already exists. This may add complexity to the Worker
-			// TODO: Refactor and optimize
-			if (createResp.status == 409) {
-				const zeroTrustLists = await listZeroTrustLists(env, API_BASE_URL);
-				// For now lets filter by name
-				const filteredLists = zeroTrustLists.filter((item) => item.name == newListName);
-				const listID = filteredLists[0].id;
-				if (!listID) {
-					throw new Error(`Could not find ID for list: ${newListName}`);
+			// Iterate through exisiting list.
+			// If it exits then pull the list items and patch the list
+			// Other if it doesn't exist then create a new list
+			let listResp;
+			const exisitingList = allZTLists.find((list) => list.name == newListName);
+			if (exisitingList) {
+				// PATCH (update)
+				const newData = {
+					append: [],
+					remove: [],
+				};
+				const existingIPListItems = await getZeroTrustListItems(env, API_BASE_URL, exisitingList.id);
+
+				// Remove any items from the existing list that are not present in the new list
+				existingIPListItems.forEach((item) => {
+					if (newIPListItems.findIndex((newItem) => newItem.value == item.value) == -1) {
+						newData.remove.push(item.value);
+					}
+				});
+
+				// Add any items that are not present in existing list to the append list
+				newIPListItems.forEach((newItem) => {
+					if (existingIPListItems.findIndex((item) => item.value == newItem.value) == -1) {
+						newData.append.push(newItem);
+					}
+				});
+
+				if (newData.append.length > 0 || newData.remove.length > 0) {
+					listResp = await patchZeroTrustList(env, API_BASE_URL, exisitingList.id, newData);
+					console.log(`Updated ${exisitingList?.name} list:`, listResp?.result);	
+				} else {
+					console.log('List values have not changed. No patch Call necessary.');
 				}
+			} else {
+				// POST (create)
+				listResp = await createZeroTrustList(env, API_BASE_URL, data);
 
-				await deleteZeroTrustList(env, API_BASE_URL, listID);
-
-				createResp = await createZeroTrustList(env, API_BASE_URL, data);
+				console.log('Created new list:', listResp?.result);
 			}
 		}
 
@@ -107,7 +132,7 @@ async function listZeroTrustLists(env, baseUrl) {
 	const results = listZTListsRespJson?.result;
 
 	if (!results || results.length == 0) {
-		throw new Error('Could not find any Gateway Lists. Exiting...');
+		throw new Error('Could not find any Zero Trust lists. Exiting...');
 	}
 
 	return results;
@@ -123,11 +148,11 @@ async function getZeroTrustListItems(env, baseUrl, id) {
 		},
 	});
 	const getZTListItemsResp = await fetch(getZTListItemsReq);
-	if (!getZTListItemsResp.ok) throw new Error('Failed to fetch');
+	if (!getZTListItemsResp.ok) throw new Error('Failed to fetch list items. Exiting...');
 
 	const getZTListItemsRespJson = await getZTListItemsResp.json();
 	const results = getZTListItemsRespJson?.result;
-	console.log('Domain Lists:', results);
+	console.log('List item:', results);
 
 	if (!results || results.length == 0) {
 		console.log('No domains in list. Exiting...');
@@ -150,7 +175,7 @@ async function getDestinationIPs(domain, dohId) {
 		},
 	});
 	const dohResp = await fetch(dohReq);
-	if (!dohResp.ok) throw new Error('Failed to fetch');
+	if (!dohResp.ok) throw new Error('Failed to fetch. Exiting...');
 
 	const dohBody = await dohResp.json();
 	let results = dohBody?.Answer;
@@ -161,7 +186,6 @@ async function getDestinationIPs(domain, dohId) {
 	}
 
 	results = results.map(({ data }) => data);
-
 	return results;
 }
 
@@ -176,19 +200,26 @@ async function createZeroTrustList(env, baseUrl, data) {
 		body: JSON.stringify(data),
 	});
 	const createZTListResp = await fetch(createZTListReq);
-	if (!createZTListResp.ok && createZTListResp.status != 409) throw new Error('Failed to create new list');
+	if (!createZTListResp.ok) throw new Error('Failed to create new list. Exiting...');
 
-	return createZTListResp;
+	const respJson = await createZTListResp.json();
+	return respJson;
 }
 
-async function deleteZeroTrustList(env, baseUrl, id) {
-	const deleteZTListReq = new Request(`${baseUrl}/gateway/lists/${id}`, {
-		method: 'DELETE',
+async function patchZeroTrustList(env, baseUrl, id, data) {
+	const patchZTListReq = new Request(`${baseUrl}/gateway/lists/${id}`, {
+		method: 'PATCH',
 		headers: {
 			'Content-Type': 'application/json',
+			accept: 'application/json',
 			authorization: `Bearer ${env.CF_ZT_API_TOKEN}`,
 		},
+		body: JSON.stringify(data),
 	});
-	const deleteZTListResp = await fetch(deleteZTListReq);
-	if (!deleteZTListResp.ok) throw new Error('Failed to delete list');
+
+	const patchZTListResp = await fetch(patchZTListReq);
+	if (!patchZTListResp.ok) throw new Error('Failed to patch list. Exiting...');
+
+	const respJson = await patchZTListResp.json();
+	return respJson;
 }
