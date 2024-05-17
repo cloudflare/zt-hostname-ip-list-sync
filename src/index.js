@@ -27,8 +27,8 @@ export default {
 		for (const domain of domains) {
 			const destinationIPList = await getDestinationIPs(domain, DOH_ID);
 			if (destinationIPList.length == 0) {
-				wasSuccessful = false;
-				throw new Error(`No destination IPs found for ${domain}`);
+				console.warn(`No destination IPs found for ${domain}`)
+				continue;
 			}
 
 			// Wrap each destination IP in an object in order to construct the payload for the createZeroTrustList request
@@ -159,8 +159,7 @@ async function getDestinationIPs(domain, dohId) {
 	let results = dohBody?.Answer;
 
 	if (!results || results.length == 0) {
-		console.log(`No IPs found for ${domain}. Exiting...`);
-		throw new Error(`No IPs found for ${domain}. Exiting...`);
+		console.warn(`No IPs found for ${domain}.`);
 	}
 
 	results = results.map(({ data }) => data);
