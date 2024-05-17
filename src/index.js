@@ -38,9 +38,10 @@ export default {
 			});
 
 			const newListName = `FQDN: ${domain}`;
+			const listDesc = `Resolved IPs for ${domain} (Do Not Edit Description)`;
 			const data = {
 				name: newListName,
-				description: `Destination IPs for ${domain}`,
+				description: listDesc,
 				items: newIPListItems,
 				type: 'IP',
 			};
@@ -50,7 +51,7 @@ export default {
 			// If it exits then pull the list items and patch the list
 			// Other if it doesn't exist then create a new list
 			let listResp;
-			const exisitingList = allZTLists.find((list) => list.name == newListName);
+			const exisitingList = allZTLists.find((list) => list.description == listDesc);
 			if (exisitingList) {
 				// PATCH (update)
 				const newData = {
