@@ -38,6 +38,14 @@ This API token is used by Terraform to provision the environment. This API token
 - `terraform init`
 - `terraform apply`
 
+### Optional Parameters
+
+#### CRON_SCHEDULE
+
+Default: `* * * * *`
+
+By default this script will run every minute. It can be run less frequently by defining a [cron schedule](https://developers.cloudflare.com/workers/configuration/cron-triggers/#supported-cron-expressions).
+
 ## Usage
 
 ### Adding hostnames to Zero Trust lists
