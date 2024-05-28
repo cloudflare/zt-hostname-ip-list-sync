@@ -33,3 +33,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 .terraform.lock.hcl
+
+# Local developer plugin configs 
+.prettierrc
+.env.*

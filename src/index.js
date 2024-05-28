@@ -1,6 +1,6 @@
 export default {
 	async fetch(event, env, ctx) {
-		return new Response('Not Implemented', { "status" : 501 });
+		return new Response('Not Implemented', { status: 501 });
 	},
 	async scheduled(event, env, ctx) {
 		const ACCOUNT_TAG = env.ZT_ACCOUNT_TAG;
@@ -45,7 +45,7 @@ export default {
 				items: newIPListItems,
 				type: 'IP',
 			};
-			console.log('Data:', data);
+			console.log('New List Data:', data);
 
 			// Iterate through exisiting list.
 			// If it exits then pull the list items and patch the list
@@ -76,7 +76,7 @@ export default {
 
 				if (newData.append.length > 0 || newData.remove.length > 0) {
 					listResp = await patchZeroTrustList(env, API_BASE_URL, exisitingList.id, newData);
-					console.log(`Updated ${exisitingList?.name} list:`, listResp?.result);	
+					console.log(`Updated ${exisitingList?.name} list:`, listResp?.result);
 				} else {
 					console.log('List values have not changed. No patch Call necessary.');
 				}
@@ -102,12 +102,11 @@ async function listZeroTrustLists(env, baseUrl) {
 		},
 	});
 	const listZTListsResp = await fetch(listZTListsReq);
-	if (!listZTListsResp.ok) throw new Error('Failed to fetch');
-
 	const listZTListsRespJson = await listZTListsResp.json();
-	console.log('ListRespJson:', listZTListsRespJson);
-	const results = listZTListsRespJson?.result;
+	if (!listZTListsResp.ok) throw new Error(`Failed to fetch Zero Trust Lists... Response: ${listZTListsRespJson}`);
 
+	const results = listZTListsRespJson?.result;
+	console.log('Zero Trust Lists:', results);
 	if (!results || results.length == 0) {
 		throw new Error('Could not find any Zero Trust lists. Exiting...');
 	}
@@ -125,12 +124,11 @@ async function getZeroTrustListItems(env, baseUrl, id) {
 		},
 	});
 	const getZTListItemsResp = await fetch(getZTListItemsReq);
-	if (!getZTListItemsResp.ok) throw new Error('Failed to fetch list items. Exiting...');
-
 	const getZTListItemsRespJson = await getZTListItemsResp.json();
-	const results = getZTListItemsRespJson?.result;
-	console.log('List item:', results);
+	if (!getZTListItemsResp.ok) throw new Error(`Failed to fetch list items. Exiting... Response: ${getZTListItemsRespJson}`);
 
+	const results = getZTListItemsRespJson?.result;
+	console.log('Zero Trust List items:', results);
 	if (!results || results.length == 0) {
 		console.log('No domains in list. Exiting...');
 		throw new Error('No domains in list. Exiting...');
@@ -152,17 +150,18 @@ async function getDestinationIPs(domain, dohId) {
 		},
 	});
 	const dohResp = await fetch(dohReq);
-	if (!dohResp.ok) throw new Error('Failed to fetch. Exiting...');
+	const dohRespJson = await dohResp.json();
+	if (!dohResp.ok) throw new Error(`Failed to fetch destination IPs. Exiting... Response: ${dohRespJson}`);
 
-	const dohBody = await dohResp.json();
-	let results = dohBody?.Answer;
-
+	let results = dohRespJson?.Answer;
+	console.log('DOH Query Results:', results);
 	if (!results || results.length == 0) {
 		console.warn(`No IPs found for ${domain}.`);
 		return false;
 	}
 
-	results = results.map(({ data }) => data);
+	// only keep results that have an IPv4 address
+	results = results.filter(({ type }) => type == 1).map(({ data }) => data);
 	return results;
 }
 
@@ -177,10 +176,10 @@ async function createZeroTrustList(env, baseUrl, data) {
 		body: JSON.stringify(data),
 	});
 	const createZTListResp = await fetch(createZTListReq);
-	if (!createZTListResp.ok) throw new Error('Failed to create new list. Exiting...');
+	const createZTListRespJson = await createZTListResp.json();
+	if (!createZTListResp.ok) throw new Error(`Failed to create new list. Exiting... Response: ${createZTListRespJson}`);
 
-	const respJson = await createZTListResp.json();
-	return respJson;
+	return createZTListRespJson;
 }
 
 async function patchZeroTrustList(env, baseUrl, id, data) {
@@ -195,8 +194,8 @@ async function patchZeroTrustList(env, baseUrl, id, data) {
 	});
 
 	const patchZTListResp = await fetch(patchZTListReq);
-	if (!patchZTListResp.ok) throw new Error('Failed to patch list. Exiting...');
+	const patchZTListRespJson = await patchZTListResp.json();
+	if (!patchZTListResp.ok) throw new Error(`Failed to patch list. Exiting... Response: ${patchZTListRespJson}`);
 
-	const respJson = await patchZTListResp.json();
-	return respJson;
+	return patchZTListRespJson;
 }
